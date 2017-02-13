@@ -21,8 +21,8 @@ module Jimson
       @opts[:content_type] = 'application/json'
     end
 
-    def process_call(sym, args)
-      resp = send_single_request(sym.to_s, args)
+    def process_call(sym, params = {})
+      resp = send_single_request(sym.to_s, params)
 
       begin
         data = MultiJson.decode(resp)
@@ -37,12 +37,12 @@ module Jimson
         raise e
     end
 
-    def send_single_request(method, args)
+    def send_single_request(method, params)
       namespaced_method = @namespace.nil? ? method : "#@namespace#{method}"
       post_data = MultiJson.encode({
         'jsonrpc' => JSON_RPC_VERSION,
         'method'  => namespaced_method,
-        'params'  => args,
+        'params'  => params,
         'id'      => self.class.make_id
       })
       resp = RestClient.post(@url, post_data, @opts)
@@ -138,7 +138,7 @@ module Jimson
     end
 
     def method_missing(sym, *args, &block)
-      request = Jimson::Request.new(sym.to_s, args)
+      request = Jimson::Request.new(sym.to_s, *args)
       @helper.push_batch_request(request) 
     end
 
@@ -162,7 +162,7 @@ module Jimson
     end
 
     def method_missing(sym, *args, &block)
-      @helper.process_call(sym, args) 
+      @helper.process_call(sym, *args) 
     end
 
     def [](method, *args)
@@ -171,7 +171,7 @@ module Jimson
         new_ns = @namespace.nil? ? "#{method}." : "#@namespace#{method}."
         return Client.new(@url, @opts, new_ns)
       end
-      @helper.process_call(method, args) 
+      @helper.process_call(method, *args) 
     end
 
   end
