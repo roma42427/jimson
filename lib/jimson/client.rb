@@ -133,7 +133,7 @@ module Jimson
     end
   end
 
-  class BatchClient < BlankSlate
+  class BatchClient
     def initialize(helper)
       @helper = helper
     end
