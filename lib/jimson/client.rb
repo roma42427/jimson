@@ -38,10 +38,9 @@ module Jimson
     end
 
     def send_single_request(method, params)
-      namespaced_method = @namespace.nil? ? method : "#@namespace#{method}"
       post_data = MultiJson.encode({
         'jsonrpc' => JSON_RPC_VERSION,
-        'method'  => namespaced_method,
+        'method'  => namespaced_method(method),
         'params'  => params,
         'id'      => self.class.make_id
       })
@@ -54,7 +53,7 @@ module Jimson
     end
 
     def send_batch_request(batch)
-      post_data = MultiJson.encode(batch)
+      post_data = MultiJson.encode(batch.map(&:to_h))
       resp = RestClient.post(@url, post_data, @opts)
       if resp.nil? || resp.body.nil? || resp.body.empty?
         raise Client::Error::InvalidResponse.new
@@ -126,22 +125,23 @@ module Jimson
       end
 
       process_batch_response(responses)
-      @batch = []
+      @batch.map { |rr| rr.last.result }
     end
 
+    def namespaced_method(method)
+      @namespace.nil? ? method : "#@namespace#{method}"
+    end
   end
 
   class BatchClient < BlankSlate
-    
     def initialize(helper)
       @helper = helper
     end
 
     def method_missing(sym, *args, &block)
-      request = Jimson::Request.new(sym.to_s, *args)
+      request = Jimson::Request.new(@helper.namespaced_method(sym.to_s), *args)
       @helper.push_batch_request(request) 
     end
-
   end
 
   class Client < BlankSlate
@@ -173,7 +173,6 @@ module Jimson
       end
       @helper.process_call(method, *args) 
     end
-
   end
 end
 
