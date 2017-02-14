@@ -125,7 +125,9 @@ module Jimson
       end
 
       process_batch_response(responses)
-      @batch.map { |rr| rr.last.result }
+      results = @batch.map { |rr| rr.last.result }
+      @batch = []
+      results
     end
 
     def namespaced_method(method)
